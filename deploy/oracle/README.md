@@ -234,9 +234,11 @@ saber de qualquer cobrança.
 
 ## Limitações conhecidas
 
-- **Login do ChatGPT por assinatura não funciona remotamente:** o retorno desse
-  login vai para o `127.0.0.1` da máquina. Os logins do GitHub Copilot e do
-  Grok usam código de dispositivo e funcionam. Chaves de API normais funcionam.
+- **Endpoint customizado e logins por assinatura não funcionam pelo endereço
+  `ts.net`.** Isso vale para Configurações → endpoint customizado e para os
+  logins do ChatGPT, Copilot e Grok. Por segurança, o app recusa essas ações
+  quando chega por um proxy HTTPS (o `tailscale serve`). Claude Code, chaves de
+  API, chat, grafo, prática e configurações funcionam normalmente.
 - **Um servidor por vez.** Não volte a usar o app desktop do PC com os mesmos
   dados: as duas cópias divergiriam.
 - **Chromium em vez de Chrome:** o Google Chrome não tem versão Linux ARM. O

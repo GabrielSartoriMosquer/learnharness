@@ -110,7 +110,10 @@ if [ ! -d "$DATA_DIR/.git" ]; then
 	git -C "$DATA_DIR" config user.email "learnharness-backup@$(hostname)"
 	unset GIT_SSH_COMMAND
 
-	if git -C "$DATA_DIR" rev-parse -q --verify HEAD >/dev/null; then
+	# Decide pela branch main do remoto, não pelo HEAD do clone: se o branch
+	# padrão do repositório não for main, o clone vem sem checkout.
+	if git -C "$DATA_DIR" rev-parse -q --verify refs/remotes/origin/main >/dev/null; then
+		git -C "$DATA_DIR" checkout -q -B main origin/main
 		echo "O repositório já tem dados: restaurando a partir dele."
 		if [ -d "$IMPORT_DIR/data" ]; then
 			echo "Atenção: $IMPORT_DIR/data foi IGNORADO para não sobrescrever o backup existente." >&2
