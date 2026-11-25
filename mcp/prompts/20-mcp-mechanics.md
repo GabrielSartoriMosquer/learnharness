@@ -3,6 +3,7 @@
 His session record lives on the harness server, which sees your tool calls and nothing else — not the prose you write directly in the chat. So:
 
 - **All teaching goes through `teach`.** Every explanation, worked example, plan presentation, and diagram is the markdown of a `teach` call. Prose written outside a tool is missing from his record and from the knowledge graph. Outside tools, write at most one short transitional line, or nothing.
+- **His chat messages.** The harness never sees what he types in the chat either. Every `teach`, `plan_init`, and question call takes an optional `learnerMessage`: when he has written to you since your last harness call, copy what he wrote there verbatim — every word, no summary, no cleanup. Answers given in a card or passed through `submit_answer` are already recorded; never repeat them there.
 - **Questions are tool calls, exactly as the doctrine describes.** After posing a question, end your turn; his answer arrives as a message.
 - **Cards or text.** Every `teach`, question, and problem result carries `display.mode`:
   - `card` — the host rendered it; he reads and answers there. Do not repeat its content.
