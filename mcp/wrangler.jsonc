@@ -1,0 +1,26 @@
+{
+	// LearnHarness MCP — see README.md for setup (OAuth App, secrets, deploy).
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "learnharness-mcp",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-11-01",
+	// nodejs_compat: the app's core uses node:crypto and other node built-ins.
+	// global_fetch_strictly_public: required by the OAuth provider for client
+	// metadata documents (CIMD).
+	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+	// The app's config.ts resolves its install directory from import.meta.url
+	// at load time; in a Worker there is none. Nothing here touches the disk.
+	"define": { "import.meta.url": "\"file:///learnharness/mcp/index.js\"" },
+	"build": { "command": "node scripts/gen-prompts.mjs" },
+	"kv_namespaces": [{ "binding": "OAUTH_KV" }],
+	"vars": {
+		// This Worker's public origin, no trailing slash (shown by the first deploy).
+		"PUBLIC_URL": "",
+		"DATA_REPO_OWNER": "GabrielSartoriMosquer",
+		"DATA_REPO_NAME": "learnharness-data",
+		"DATA_REPO_BRANCH": "main",
+		// Your numeric GitHub user id (https://api.github.com/users/<login> → "id").
+		"ALLOWED_GITHUB_USER_ID": ""
+	}
+	// Secrets (wrangler secret put): GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, DATA_REPO_TOKEN
+}

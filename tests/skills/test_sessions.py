@@ -337,11 +337,55 @@ class SessionsTest(unittest.TestCase):
         self.assertNotIn("<script>", self.render(source))
         self.assertIn("&lt;script&gt;", self.render(source))
 
+    def test_format_2_side_conversations_are_recognized_and_preserved(self):
+        # Shaped like a record written by the app's chat store (format 2).
+        question = {"id": "sq_1", "role": "user", "text": "Why does h^2 vanish?",
+                    "quotes": ["(x+h)^2 - x^2 = 2xh + h^2"], "at": "2026-11-25T00:00:03Z"}
+        partial = {"id": "sa_1", "role": "assistant", "text": "Dividing by h leaves h,", "at": "2026-11-25T00:00:04Z",
+                   "model": "p:m", "requestId": "req_1", "pending": True}
+        source = record([
+            assistant({"type": "text", "text": "(x+h)^2 - x^2 = 2xh + h^2"}, message_id="m_asst_1"),
+            marker("side-question", "Recorded learner–helper conversation update", {"threadId": "side_1", "updates": [{**question, "append": False}]}, "exchange_side_1_update_1"),
+            marker("side-question", "Helper:", {"threadId": "side_1", "updates": [{**partial, "append": False}]}, "exchange_side_1_update_2"),
+            marker("side-question", "Helper (continued reply):", {"threadId": "side_1", "updates": [{**partial, "text": " which goes to 0.", "pending": None, "append": True}]}, "exchange_side_1_update_3"),
+            marker("side-question-told", "Helper note told later", {"threadId": "old_thread"}, "old_thread_told"),
+        ], version=2, sideChats=[{
+            "id": "side_1", "open": True, "createdAt": "2026-11-25T00:00:02Z",
+            "anchor": {"messageId": "m_asst_1", "partId": "m_asst_1-t0", "blockIndex": 0, "blockText": "(x+h)^2 - x^2 = 2xh + h^2"},
+            "messages": [question, {**partial, "text": "Dividing by h leaves h, which goes to 0.", "pending": None}],
+            "contextSnapshot": [],
+        }])
+        text = self.render(source)
+        self.assertIn("native format: 2", text)
+        self.assertNotIn("unsupported/unrendered marker", text)
+        self.assertIn("## Side conversations (sideChats)", text)
+        self.assertNotIn("Stored session context", text)
+        self.assertEqual(text.count("**Side conversation update**"), 3)
+        self.assertIn("**Side conversation told to the tutor**", text)
+        for value in ("Why does h^2 vanish?", "Dividing by h leaves h,", " which goes to 0.", "req_1",
+                      "Dividing by h leaves h, which goes to 0.", "contextSnapshot", "Helper note told later"):
+            self.assertIn(value, text)
+        selected = sessions.selected_record(source)
+        self.assertEqual(selected["record"]["sideChats"], source["sideChats"])
+        self.assertEqual([m["details"] for m in selected["record"]["messages"][1:]], [m["details"] for m in source["messages"][1:]])
+        self.assertTrue(any("Side conversations" in note for note in selected["reading_notes"]))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.save(root, source)
+            before = snapshot(root)
+            listed = self.cli(root, "--format", "json", "list")
+            self.assertEqual(listed.returncode, 0, listed.stderr)
+            self.assertEqual([s["id"] for s in json.loads(listed.stdout)["sessions"]], ["sample"])
+            read = self.cli(root, "read", "sample")
+            self.assertEqual(read.returncode, 0, read.stderr)
+            self.assertIn("Why does h^2 vanish?", read.stdout)
+            self.assertEqual(before, snapshot(root))
+
     def test_cli_errors_isolated_list_and_missing_defaults(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.save(root, record())
-            self.save(root, record(session_id="future", version=2))
+            self.save(root, record(session_id="future", version=3))
             self.save(root, record(session_id="old", messages=[{"role": "assistant", "parts": []}]))
             (root / "chats" / "broken.json").write_text("{bad", encoding="utf-8")
             before = snapshot(root)
