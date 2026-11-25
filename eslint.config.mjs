@@ -21,8 +21,9 @@ import importPlugin from "eslint-plugin-import";
 
 export default defineConfig([
 	// electron/** — the desktop shell: plain Node, no framework, outside the
-// import law (same rationale as scripts/).
-	globalIgnores([".next/**", "node_modules/**", "data/**", "next-env.d.ts", "scripts/**", "electron/**", "dist/**"]),
+// import law (same rationale as scripts/). mcp/** — the Cloudflare Worker host
+// (its own package, tsconfig and dependencies), outside the import law likewise.
+	globalIgnores([".next/**", "node_modules/**", "data/**", "next-env.d.ts", "scripts/**", "electron/**", "dist/**", "mcp/**"]),
 	{
 		files: ["**/*.{js,mjs,ts,tsx}"],
 		languageOptions: {
