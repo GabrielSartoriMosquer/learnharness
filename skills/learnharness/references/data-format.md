@@ -2,9 +2,12 @@
 
 The files are the user's record, not an import format to rewrite. Work read-only.
 The bundled readers make common views convenient; they are not required for custom
-analysis. This reference describes native session/graph format **1**. An absent
-version stamp means v1. Older fields within that format are described below;
-pre-native `parts`/UIMessage transcripts are a different, unsupported dialect.
+analysis. This reference describes native session formats **1–2** and graph format
+**1**. An absent version stamp means v1. Format 2 changed the side-conversation
+fields (see [Side conversations](#side-conversations)); a v1 record is stamped 2 on
+its next app write, so a v2 record can still hold v1-era fields. Older fields are
+described below; pre-native `parts`/UIMessage transcripts are a different,
+unsupported dialect.
 
 ## File map
 
@@ -37,11 +40,12 @@ Each `chats/*.json` file is an object with:
 | `id`, `title` | Stable session identity and user-visible name |
 | `createdAt`, `updatedAt` | ISO date strings for the session, not a date for every idea |
 | `kind` | `teach` or `practice`; absent means `teach` |
-| `version` | Format stamp; absent means v1 |
+| `version` | Format stamp: 1 or 2; absent means v1 |
 | `messages` | Complete stored chronological history, including custom app markers |
 | `tree` | Optional session plan: nodes, prerequisite edges, revision number |
 | `turns`, `extractions` | Parallel usage/cost-observation logs, not learner answers |
 | `settings` | Per-session model/thinking overrides, not an understanding assessment |
+| `sideChats` | Side-conversation threads' current state (see [Side conversations](#side-conversations)) |
 
 The plan is session scaffolding, not the persistent knowledge graph. Its visited
 or current positions are not proof of mastery. Context compaction changes what the
@@ -144,6 +148,8 @@ recall/explain response: the teacher's subsequent prose is its interpretation.
 | `practice-next` | Learner moved on to another problem |
 | `problem-dismissed` | Learner skipped a practice problem; points to its problem call |
 | `compaction` | Context-management bookkeeping, not a learner statement or replacement for history |
+| `side-question` | A side-conversation exchange delivered to the teacher; learner questions inside are **learner-authored** (see below) |
+| `side-question-told` | Format 1 era: a closed side thread's note told to the tutor afterwards; `details.threadId` |
 
 The practice `problem` tool holds the statement, target proposition IDs, and
 precommitted `modelSolution`. There may be many `practice-thinking` submissions for
@@ -155,6 +161,33 @@ Call IDs may repeat in older records. When joining, associate a result with the
 nearest matching **preceding** call; a whole-session last-wins map can attach it
 to a later call. Message IDs distinguish occurrences. Neither source order nor
 learner attribution should be reconstructed from model-compacted context.
+
+### Side conversations
+
+The learner can ask a separate **helper model** about a teacher passage without
+interrupting the lesson. Its questions are learner evidence; the helper's replies
+are model-authored and are neither teacher prose nor learner speech.
+
+`sideChats` holds each thread's current saved state: `id`, `anchor` (`messageId`,
+`partId`, `blockIndex`, and the passage's `blockText`), `open`, `createdAt`, and
+`messages`. Each message has `id`, `role` (`user` = learner, `assistant` = helper),
+`text`, and `at`; learner messages can add `quotes` (attached passages) and
+`quoteCitations`; helper messages can add `model`, `requestId`, and the
+incomplete-reply flags `pending`, `stopped`, or `error`. `contextSnapshot` is a
+legacy one-shot cutoff found only in early format-2 records.
+
+What the teacher was actually shown lives in the message history. In format 2,
+every main request appends `side-question` markers for new side activity:
+`details` is `{threadId, updates}`, where each update is a side message as above.
+`append: true` means `text` is only the suffix continuing the earlier update with
+the same `id`; otherwise it is the full text. A reply recorded as `pending` can be
+completed, stopped, or marked as failed in a later update. `content` is the
+teacher-facing text of that update. Early format-2 markers use `details.snapshot`
+instead of `updates`. Format-1 markers have `details.thread` (question/answer
+pairs), a helper-written `note`, and `toldTutor`; a `side-question-told` marker
+delivered that note later. Thread state and delivered updates can differ (for
+example, a reply written after the last main request); keep them separate rather
+than reconciling them.
 
 ### Delivered artifacts
 
